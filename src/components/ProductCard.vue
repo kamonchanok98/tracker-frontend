@@ -12,6 +12,7 @@ export interface Product {
 
 defineProps<{
   product: Product;
+  isFavorite?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -40,11 +41,12 @@ const emit = defineEmits<{
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              fill="none"
+              :fill="isFavorite ? 'currentColor' : 'none'"
               viewBox="0 0 24 24"
               stroke-width="1.8"
               stroke="currentColor"
-              class="w-6 h-6 text-white hover:opacity-90 transition"
+              :class="isFavorite ? 'text-red-500' : 'text-gray-400 hover:text-red-400'"
+              class="w-6 h-6 transition"
             >
               <path
                 stroke-linecap="round"

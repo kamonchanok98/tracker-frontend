@@ -1,20 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import Navbar from './components/Navbar.vue';
-import ProductCard, { type Product } from './components/ProductCard.vue';
+import RegisterModal from './components/modals/Register.vue';
+import type { Product } from './components/ProductCard.vue';
 
-// 1. Local search state
-const searchQuery = ref<string>('');
-
+// 1. Reactive state
+const isRegisterOpen = ref<boolean>(false);
 const favoriteIds = ref<Set<number>>(new Set());
-
-const handleToggleFavorite = (id: number): void => {
-  if (favoriteIds.value.has(id)) {
-    favoriteIds.value.delete(id);
-  } else {
-    favoriteIds.value.add(id);
-  }
-};
+const searchQuery = ref<string>('');
 
 // 2. Strongly typed product list mock data
 const products = ref<Product[]>([
@@ -60,51 +53,46 @@ const filteredProducts = computed<Product[]>(() => {
   return products.value.filter(product => product.name.toLowerCase().includes(query));
 });
 
-// 4. Handle custom event emitted from Navbar component
+// 4. Event Handlers
+// Handle custom event emitted from Navbar component
 const handleSearch = (query: string): void => {
   searchQuery.value = query;
+};
+
+const handleToggleFavorite = (id: number): void => {
+  const updated = new Set(favoriteIds.value);
+  if (updated.has(id)) {
+    updated.delete(id);
+  } else {
+    updated.add(id);
+  }
+  favoriteIds.value = updated; // Reassignment triggers Vue reactivity
 };
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-100 font-sans pb-12">
-    <!-- Navbar Component listening to @search event -->
-    <Navbar :fav-count="favoriteIds.size" @search="handleSearch" />
+    <!-- Navbar with both search & register handlers -->
+    <Navbar
+      :fav-count="favoriteIds.size"
+      @search="handleSearch"
+      @open-register="isRegisterOpen = true"
+    />
 
     <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
-      <!-- Section Title Header -->
-      <div
-        class="bg-white p-4 rounded-t-sm border-b border-gray-100 flex items-center justify-between mb-4 shadow-sm"
-      >
-        <h2
-          class="text-base sm:text-lg font-bold text-[#ee4d2d] uppercase tracking-wide flex items-center gap-2"
-        >
-          <span>🔥</span> Daily Discover
-        </h2>
-        <span class="text-xs text-gray-500"> Showing {{ filteredProducts.length }} items </span>
-      </div>
-
-      <!-- Responsive Product Grid -->
-      <div
-        v-if="filteredProducts.length > 0"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4"
-      >
-        <ProductCard
-          v-for="product in products"
-          :key="product.id"
-          :product="product"
+    <main class="max-w-7xl mx-auto p-4">
+      <!-- Use v-slot to pass props down to the active view -->
+      <router-view v-slot="{ Component }">
+        <component
+          :is="Component"
+          :products="filteredProducts"
+          :favorite-ids="favoriteIds"
           @toggle-favorite="handleToggleFavorite"
         />
-      </div>
-
-      <!-- Empty State Fallback -->
-      <div v-else class="text-center py-12 bg-white rounded-sm shadow-sm text-gray-500 text-sm">
-        No products found matching "<span class="font-semibold text-gray-700">{{
-          searchQuery
-        }}</span
-        >"
-      </div>
+      </router-view>
     </main>
+
+    <!-- Global Registration Modal -->
+    <RegisterModal :is-open="isRegisterOpen" @close="isRegisterOpen = false" />
   </div>
 </template>

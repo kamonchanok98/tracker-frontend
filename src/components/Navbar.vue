@@ -7,11 +7,11 @@ defineProps<{
 // 1. Define typed emitted events for parent component communication
 const emit = defineEmits<{
   (e: 'search', searchQuery: string): void;
+  (e: 'open-register'): void;
 }>();
 
 // 2. Strongly typed reactive state for the search input
 const searchQuery = ref<string>('');
-const favCount = ref<number>(0);
 
 // Popular search terms list
 const popularSearches = ref<string[]>([
@@ -44,7 +44,13 @@ const selectPopularTerm = (term: string): void => {
         </div>
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2 font-semibold border-l border-white/20 pl-4">
-            <a href="#" class="hover:opacity-80 transition">Sign Up</a>
+            <button
+              type="button"
+              @click="emit('open-register')"
+              class="hover:opacity-80 transition cursor-pointer font-semibold"
+            >
+              Sign Up
+            </button>
             <span class="opacity-40">|</span>
             <a href="#" class="hover:opacity-80 transition">Login</a>
           </div>
