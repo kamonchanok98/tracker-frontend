@@ -1,19 +1,34 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuth } from '../composables/useAuth';
+
+const router = useRouter();
+const { user, logout } = useAuth();
+
+// Default fallback avatar (data URI) if user has no profile photo
+const DEFAULT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%23cccccc"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`;
+
+// Compute picture URL safely (supports both camelCase and snake_case)
+const userAvatar = computed(() => {
+  if (!user.value) return DEFAULT_AVATAR;
+  // @ts-ignore - defensive check for older localStorage schema
+  return user.value.pictureUrl || user.value.picture_url || DEFAULT_AVATAR;
+});
+
+// Emitted events for parent component
+const emit = defineEmits<{
+  (e: 'search', searchQuery: string): void;
+  (e: 'open-register'): void;
+  (e: 'open-login'): void;
+}>();
 
 defineProps<{
   favCount: number;
 }>();
-// 1. Define typed emitted events for parent component communication
-const emit = defineEmits<{
-  (e: 'search', searchQuery: string): void;
-  (e: 'open-register'): void;
-}>();
 
-// 2. Strongly typed reactive state for the search input
 const searchQuery = ref<string>('');
 
-// Popular search terms list
 const popularSearches = ref<string[]>([
   'Earbuds',
   'Smart Watch',
@@ -22,13 +37,30 @@ const popularSearches = ref<string[]>([
   'Gaming Headphones',
 ]);
 
-// 3. Event handler that emits the search query string upward
+const loginWithLine = async () => {
+  try {
+    const res = await fetch('/api/accounts/line/login-url/');
+    const data = await res.json();
+    if (data.auth_url) {
+      window.location.href = data.auth_url;
+    }
+  } catch (err) {
+    console.error('Failed to get LINE login URL:', err);
+  }
+};
+
 const handleSearch = (): void => {
   emit('search', searchQuery.value.trim());
 };
+
 const selectPopularTerm = (term: string): void => {
   searchQuery.value = term;
   emit('search', term);
+};
+
+const handleLogout = () => {
+  logout();
+  router.push('/');
 };
 </script>
 
@@ -42,8 +74,30 @@ const selectPopularTerm = (term: string): void => {
           <span class="opacity-40">|</span>
           <a href="#" class="hover:opacity-80">Download</a>
         </div>
+
+        <!-- Right Side: Auth / Profile -->
         <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2 font-semibold border-l border-white/20 pl-4">
+          <!-- LOGGED IN USER -->
+          <div v-if="user" class="flex items-center gap-2 font-semibold">
+            <img
+              :src="userAvatar"
+              alt="Profile"
+              class="w-6 h-6 rounded-full object-cover border border-white/80"
+              @error="e => ((e.target as HTMLImageElement).src = DEFAULT_AVATAR)"
+            />
+            <span class="text-white">{{ user.displayName }}</span>
+            <span class="opacity-40">|</span>
+            <button
+              type="button"
+              @click="handleLogout"
+              class="hover:opacity-80 transition cursor-pointer font-semibold text-white/90"
+            >
+              Logout
+            </button>
+          </div>
+
+          <!-- LOGGED OUT -->
+          <div v-else class="flex items-center gap-2 font-semibold border-l border-white/20 pl-4">
             <button
               type="button"
               @click="emit('open-register')"
@@ -52,7 +106,13 @@ const selectPopularTerm = (term: string): void => {
               Sign Up
             </button>
             <span class="opacity-40">|</span>
-            <a href="#" class="hover:opacity-80 transition">Login</a>
+            <button
+              type="button"
+              @click="emit('open-login')"
+              class="hover:opacity-80 transition cursor-pointer font-semibold"
+            >
+              Log In
+            </button>
           </div>
         </div>
       </div>
@@ -63,7 +123,9 @@ const selectPopularTerm = (term: string): void => {
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-6">
         <!-- Brand Logo -->
         <div class="flex items-center gap-2 cursor-pointer flex-shrink-0">
-          <div class="text-3xl font-black italic tracking-tighter">Product Price Tracker</div>
+          <router-link class="text-3xl font-black italic tracking-tighter" to="/"
+            >Product Price Tracker</router-link
+          >
           <span
             class="text-[10px] bg-white text-[#ee4d2d] px-1 py-0.5 rounded font-bold uppercase tracking-wider"
             >Clone</span
@@ -72,7 +134,6 @@ const selectPopularTerm = (term: string): void => {
 
         <!-- Search Bar Area -->
         <div class="flex-1 max-w-2xl">
-          <!-- Search Bar Form -->
           <form
             @submit.prevent="handleSearch"
             class="flex-1 max-w-2xl bg-white p-1 rounded-sm flex"
@@ -90,6 +151,7 @@ const selectPopularTerm = (term: string): void => {
               🔍
             </button>
           </form>
+
           <!-- Popular Search Terms -->
           <div class="flex gap-4 text-xs mt-1.5 opacity-90 overflow-x-auto whitespace-nowrap">
             <button

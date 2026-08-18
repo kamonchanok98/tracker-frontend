@@ -2,10 +2,12 @@
 import { ref, computed } from 'vue';
 import Navbar from './components/Navbar.vue';
 import RegisterModal from './components/modals/Register.vue';
+import LoginModal from './components/modals/Login.vue';
 import type { Product } from './components/ProductCard.vue';
 
 // 1. Reactive state
 const isRegisterOpen = ref<boolean>(false);
+const isLoginModalOpen = ref(false);
 const favoriteIds = ref<Set<number>>(new Set());
 const searchQuery = ref<string>('');
 
@@ -77,6 +79,7 @@ const handleToggleFavorite = (id: number): void => {
       :fav-count="favoriteIds.size"
       @search="handleSearch"
       @open-register="isRegisterOpen = true"
+      @open-login="isLoginModalOpen = true"
     />
 
     <!-- Main Container -->
@@ -94,5 +97,6 @@ const handleToggleFavorite = (id: number): void => {
 
     <!-- Global Registration Modal -->
     <RegisterModal :is-open="isRegisterOpen" @close="isRegisterOpen = false" />
+    <LoginModal :isOpen="isLoginModalOpen" @close="isLoginModalOpen = false" />
   </div>
 </template>
